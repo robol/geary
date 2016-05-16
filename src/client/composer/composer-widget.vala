@@ -579,6 +579,7 @@ public class ComposerWidget : Gtk.EventBox {
         
         WebKit.WebSettings s = editor.settings;
         s.enable_spell_checking = GearyApplication.instance.config.spell_check;
+        s.spell_checking_languages = GearyApplication.instance.config.spell_check_languages;
         s.auto_load_images = false;
         s.enable_scripts = false;
         s.enable_java_applet = false;
@@ -2159,12 +2160,44 @@ public class ComposerWidget : Gtk.EventBox {
         select_all_item.activate.connect(on_select_all);
         context_menu.append(select_all_item);
         
+        // Language chooser
+        Gtk.MenuItem language_chooser_item = new Gtk.MenuItem.with_mnemonic(_("Language"));
+        Gtk.Menu language_submenu = new Gtk.Menu();
+        language_chooser_item.set_submenu(language_submenu);
+
+        foreach (string lang in get_user_preferred_languages()) {
+			Gtk.MenuItem lang_item = new Gtk.MenuItem.with_label(lang);
+			language_submenu.append(lang_item);
+			lang_item.activate.connect (() => {
+				set_spell_checking_languages(lang);
+			});
+		}
+
+        context_menu.append(language_chooser_item);
+
         context_menu.show_all();
         
         update_actions();
         
         return false;
     }
+
+    private void set_spell_checking_languages(string lang) {
+		WebKit.WebSettings s = editor.settings;
+		// TODO: At this point it would probably be a good idea to recheck the whole document,
+		// since we have changed the language. This does not seem to be possible in WebKit, though.
+		s.spell_checking_languages = lang;
+		GearyApplication.instance.config.spell_check_languages = lang;
+	}
+
+    private string[] get_user_preferred_languages() {
+		string[] output = {};
+		foreach (string lang in GLib.Intl.get_language_names()) {
+			if (lang != "C")
+				output += lang;
+		}
+		return output;
+	}
     
     private bool on_editor_key_press(Gdk.EventKey event) {
         // widget's keypress override doesn't receive non-modifier keys when the editor processes

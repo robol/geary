@@ -23,11 +23,14 @@ public class Configuration {
     public const string STARTUP_NOTIFICATIONS_KEY = "startup-notifications";
     public const string ASK_OPEN_ATTACHMENT_KEY = "ask-open-attachment";
     public const string COMPOSE_AS_HTML_KEY = "compose-as-html";
+    public const string SPELL_CHECK_LANGUAGES = "spell-check-languages";
     
     public Settings settings { get; private set; }
     
     public Settings gnome_interface;
     private Settings? indicator_datetime;
+
+    private string? _spell_check_languages = null;
     
     public int window_width {
         get { return settings.get_int(WINDOW_WIDTH_KEY); }
@@ -77,6 +80,16 @@ public class Configuration {
     
     public bool spell_check {
         get { return settings.get_boolean(SPELL_CHECK_KEY); }
+    }
+
+    private weak string _get_spell_check_languages() {
+        _spell_check_languages = settings.get_string(SPELL_CHECK_LANGUAGES);
+        return _spell_check_languages;
+    }
+
+    public string spell_check_languages {
+        get { return _get_spell_check_languages(); }
+        set { settings.set_string(SPELL_CHECK_LANGUAGES, value); }
     }
 
     public bool play_sounds {
