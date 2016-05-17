@@ -2203,10 +2203,7 @@ public class ComposerWidget : Gtk.EventBox {
 		}
 		
 		string[] langs = {};
-		spell_check_languages.foreach ((l) => langs += l);
-		
-		// TODO: At this point it would probably be a good idea to recheck the whole document,
-		// since we have changed the language. This does not seem to be possible in WebKit, though.
+		spell_check_languages.foreach ((l) => langs += l);		
 		s.spell_checking_languages = string.joinv(",", langs);
 		GearyApplication.instance.config.spell_check_languages = s.spell_checking_languages;
 	}
