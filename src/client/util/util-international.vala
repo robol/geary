@@ -49,9 +49,9 @@ public string? official_name_from_locale (string locale) {
 	if (official_names == null) {
 		official_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
 			
-		unowned Xml.Doc doc = Xml.Parser.parse_file ("/usr/share/xml/iso-codes/iso_639.xml");
+		unowned Xml.Doc doc = Xml.Parser.parse_file("/usr/share/xml/iso-codes/iso_639.xml");
 		if (doc == null) {
-			// FIXME: Print out an error here
+			return null;
 		}
 		else {
 			unowned Xml.Node root = doc.get_root_element();

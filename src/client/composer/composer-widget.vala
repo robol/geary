@@ -269,6 +269,8 @@ public class ComposerWidget : Gtk.EventBox {
     private uint draft_save_timeout_id = 0;
     private bool is_closing = false;
     
+    private GLib.GenericSet<string> spell_check_languages = null;
+    
     public WebKit.WebView editor;
     // We need to keep a reference to the edit-fixer in composer-window, so it doesn't get
     // garbage-collected.
@@ -585,6 +587,11 @@ public class ComposerWidget : Gtk.EventBox {
         s.enable_java_applet = false;
         s.enable_plugins = false;
         editor.settings = s;
+        
+        spell_check_languages = new GLib.GenericSet<string>(str_hash, str_equal);
+        foreach (string lang in s.spell_checking_languages.split(",")) {
+			spell_check_languages.add(lang.strip());
+		}
         
         scroll.add(editor);
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
@@ -2167,11 +2174,12 @@ public class ComposerWidget : Gtk.EventBox {
 
         foreach (string lang in get_user_preferred_languages()) {
 			string? lang_name = International.official_name_from_locale(lang);			
-			Gtk.MenuItem lang_item = new Gtk.MenuItem.with_label(
+			Gtk.CheckMenuItem lang_item = new Gtk.CheckMenuItem.with_label(
 				lang_name != null ? lang_name + " (" + lang + ")" : lang);
-			language_submenu.append(lang_item);
-			lang_item.activate.connect (() => {
-				set_spell_checking_languages(lang);
+			language_submenu.append(lang_item);			
+			lang_item.set_active(spell_check_languages.contains(lang));
+			lang_item.toggled.connect (() => {
+				toggle_spell_checking_languages(lang);
 			});
 		}
 
@@ -2184,12 +2192,23 @@ public class ComposerWidget : Gtk.EventBox {
         return false;
     }
 
-    private void set_spell_checking_languages(string lang) {
+    private void toggle_spell_checking_languages(string lang) {
 		WebKit.WebSettings s = editor.settings;
+		
+		if (spell_check_languages.contains(lang)) {
+			spell_check_languages.remove(lang);
+		}
+		else {
+			spell_check_languages.add(lang);
+		}
+		
+		string[] langs = {};
+		spell_check_languages.foreach ((l) => langs += l);
+		
 		// TODO: At this point it would probably be a good idea to recheck the whole document,
 		// since we have changed the language. This does not seem to be possible in WebKit, though.
-		s.spell_checking_languages = lang;
-		GearyApplication.instance.config.spell_check_languages = lang;
+		s.spell_checking_languages = string.joinv(",", langs);
+		GearyApplication.instance.config.spell_check_languages = s.spell_checking_languages;
 	}
 
     private string[] get_user_preferred_languages() {
