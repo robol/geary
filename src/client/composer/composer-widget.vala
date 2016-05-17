@@ -2166,7 +2166,9 @@ public class ComposerWidget : Gtk.EventBox {
         language_chooser_item.set_submenu(language_submenu);
 
         foreach (string lang in get_user_preferred_languages()) {
-			Gtk.MenuItem lang_item = new Gtk.MenuItem.with_label(lang);
+			string? lang_name = International.official_name_from_locale(lang);			
+			Gtk.MenuItem lang_item = new Gtk.MenuItem.with_label(
+				lang_name != null ? lang_name + " (" + lang + ")" : lang);
 			language_submenu.append(lang_item);
 			lang_item.activate.connect (() => {
 				set_spell_checking_languages(lang);
