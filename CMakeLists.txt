@@ -22,6 +22,9 @@ set(RELEASE_NAME "Lightweight email client for GNOME.")
 set(VERSION "0.11.0")
 set(VERSION_INFO "Release")
 set(LANGUAGE_SUPPORT_DIRECTORY ${CMAKE_INSTALL_PREFIX}/share/locale)
+# set(ISOCODES_DIRECTORY ${CMAKE_INSTALL_PREFIX}/share/xml/iso-codes)
+
+find_path(ISOCODES_DIRECTORY NAMES iso_639.xml PATHS ${CMAKE_INSTALL_PREFIX} /usr/share/xml/iso-codes)
 
 # Packaging filenamesnames.
 set(ARCHIVE_BASE_NAME ${CMAKE_PROJECT_NAME}-${VERSION})

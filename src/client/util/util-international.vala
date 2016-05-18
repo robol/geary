@@ -5,6 +5,7 @@
  */
 
 extern const string LANGUAGE_SUPPORT_DIRECTORY;
+extern const string ISOCODES_DIRECTORY;
 public const string TRANSLATABLE = "translatable";
 
 namespace International {
@@ -49,7 +50,8 @@ public string? official_name_from_locale (string locale) {
 	if (official_names == null) {
 		official_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
 			
-		unowned Xml.Doc doc = Xml.Parser.parse_file("/usr/share/xml/iso-codes/iso_639.xml");
+		unowned Xml.Doc doc = Xml.Parser.parse_file(
+			GLib.Path.build_filename(ISOCODES_DIRECTORY, "iso_639.xml"));
 		if (doc == null) {
 			return null;
 		}
