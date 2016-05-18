@@ -2165,8 +2165,8 @@ public class ComposerWidget : Gtk.EventBox {
         Gtk.MenuItem language_chooser_item = new Gtk.MenuItem.with_mnemonic(_("Language"));
         Gtk.Menu language_submenu = new Gtk.Menu();
         language_chooser_item.set_submenu(language_submenu);
-
-        foreach (string lang in get_user_preferred_languages()) {
+               
+        foreach (string lang in  International.get_available_dictionaries()) {
 			string? lang_name = International.official_name_from_locale(lang);			
 			Gtk.CheckMenuItem lang_item = new Gtk.CheckMenuItem.with_label(
 				lang_name != null ? lang_name + " (" + lang + ")" : lang);
@@ -2206,15 +2206,6 @@ public class ComposerWidget : Gtk.EventBox {
 		
 		s.spell_checking_languages = string.joinv(",", 
 			GearyApplication.instance.config.spell_check_languages);
-	}
-
-    private string[] get_user_preferred_languages() {
-		string[] output = {};
-		foreach (string lang in GLib.Intl.get_language_names()) {
-			if (lang != "C")
-				output += lang;
-		}
-		return output;
 	}
     
     private bool on_editor_key_press(Gdk.EventKey event) {

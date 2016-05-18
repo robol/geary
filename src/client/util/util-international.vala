@@ -25,24 +25,24 @@ private string get_langpack_dir_path(string program_path) {
     return LANGUAGE_SUPPORT_DIRECTORY;
 }
 
-public string[] get_available_locales() {
-	string[] locales = {};
+public string[] get_available_dictionaries() {
+	string[] dictionaries = {};
 	
-	GLib.File dictionary_directory = File.new_for_path("/usr/share/hunspell");
+	Enchant.Broker broker = new Enchant.Broker();
+	broker.list_dicts((lang_tag, provider_name, provider_desc, provider_file) => {
+		dictionaries += lang_tag;
+	});
 	
-	try {
-		GLib.FileEnumerator e = dictionary_directory.enumerate_children(
-			FileAttribute.STANDARD_NAME, 0);			
-		for (GLib.FileInfo info = e.next_file(); info != null; info = e.next_file()) {
-			string name = info.get_name();
-			if (name.len() > 4 && !("-" in name) && name.substring(-4) == ".dic") {
-				locales += name.substring(0, name.len() - 4);
-			}
-		}		
-	} catch (GLib.Error e) {
-		return locales;
+	return dictionaries; 
+}
+
+public string[] get_user_preferred_languages() {
+	string[] output = {};
+	foreach (unowned string lang in GLib.Intl.get_language_names()) {
+		if (lang != "C")
+			output += lang;
 	}
-	return locales;
+	return output;
 }
 
 public string? official_name_from_locale (string locale) {
@@ -73,8 +73,15 @@ public string? official_name_from_locale (string locale) {
 						}
 						
 						if (language_name != null) {
-							if (iso_639_1 != null)
-								official_names.insert(iso_639_1, language_name);
+							if (iso_639_1 != null) {
+								// Try to get a translation for the name, if available
+								string current_locale = GLib.Intl.setlocale(
+									GLib.LocaleCategory.MESSAGES, null);
+								GLib.Intl.setlocale(GLib.LocaleCategory.MESSAGES, iso_639_1);
+								official_names.insert(iso_639_1, 
+									GLib.dgettext("iso_639", language_name));
+								GLib.Intl.setlocale(GLib.LocaleCategory.MESSAGES, current_locale);
+							}
 						}
 					}
 				}

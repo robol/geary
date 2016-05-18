@@ -81,7 +81,14 @@ public class Configuration {
     }
 
     public string[] spell_check_languages {
-        owned get { return settings.get_strv(SPELL_CHECK_LANGUAGES); }
+        owned get { 
+			string[] langs = settings.get_strv(SPELL_CHECK_LANGUAGES);
+			if (langs.length == 0) {
+				langs = International.get_user_preferred_languages();
+				settings.set_strv(SPELL_CHECK_LANGUAGES, langs);
+			} 
+			return langs;
+		}
         set { settings.set_strv(SPELL_CHECK_LANGUAGES, value); }
     }
 

@@ -67,6 +67,8 @@ pkg_check_modules(WEBKITGTK110X QUIET webkitgtk-3.0>=1.10.0 webkitgtk-3.0<=1.10.
 
 pkg_check_modules(GTK312X QUIET gtk+-3.0>=3.12.0)
 
+pkg_check_modules(ENCHANT QUIET enchant)
+
 pkg_check_modules(SQLITE311 QUIET sqlite3>=3.11.0)
 pkg_check_modules(SQLITE312 QUIET sqlite3>=3.12.0)
 if (SQLITE311_FOUND AND NOT SQLITE312_FOUND)
@@ -83,6 +85,7 @@ endif ()
 
 # GResources
 include(GlibCompileResourcesSupport)
+
 
 #
 # Uninstall target
