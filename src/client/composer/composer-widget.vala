@@ -269,8 +269,6 @@ public class ComposerWidget : Gtk.EventBox {
     private uint draft_save_timeout_id = 0;
     private bool is_closing = false;
     
-    private GLib.GenericSet<string> spell_check_languages = null;
-    
     public WebKit.WebView editor;
     // We need to keep a reference to the edit-fixer in composer-window, so it doesn't get
     // garbage-collected.
@@ -581,17 +579,13 @@ public class ComposerWidget : Gtk.EventBox {
         
         WebKit.WebSettings s = editor.settings;
         s.enable_spell_checking = GearyApplication.instance.config.spell_check;
-        s.spell_checking_languages = GearyApplication.instance.config.spell_check_languages;
+        s.spell_checking_languages = string.joinv(",", 
+			GearyApplication.instance.config.spell_check_languages);
         s.auto_load_images = false;
         s.enable_scripts = false;
         s.enable_java_applet = false;
         s.enable_plugins = false;
         editor.settings = s;
-        
-        spell_check_languages = new GLib.GenericSet<string>(str_hash, str_equal);
-        foreach (string lang in s.spell_checking_languages.split(",")) {
-			spell_check_languages.add(lang.strip());
-		}
         
         scroll.add(editor);
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
@@ -2177,7 +2171,7 @@ public class ComposerWidget : Gtk.EventBox {
 			Gtk.CheckMenuItem lang_item = new Gtk.CheckMenuItem.with_label(
 				lang_name != null ? lang_name + " (" + lang + ")" : lang);
 			language_submenu.append(lang_item);			
-			lang_item.set_active(spell_check_languages.contains(lang));
+			lang_item.set_active(lang in GearyApplication.instance.config.spell_check_languages);
 			lang_item.toggled.connect (() => {
 				toggle_spell_checking_languages(lang);
 			});
@@ -2195,17 +2189,23 @@ public class ComposerWidget : Gtk.EventBox {
     private void toggle_spell_checking_languages(string lang) {
 		WebKit.WebSettings s = editor.settings;
 		
-		if (spell_check_languages.contains(lang)) {
-			spell_check_languages.remove(lang);
+		if (lang in GearyApplication.instance.config.spell_check_languages) {
+			string[] new_languages = {};
+			foreach (string l in GearyApplication.instance.config.spell_check_languages) {
+				if (l != lang) {
+					new_languages += l;
+				}
+			}
+			GearyApplication.instance.config.spell_check_languages = new_languages;
 		}
 		else {
-			spell_check_languages.add(lang);
+			string[] current_langs = GearyApplication.instance.config.spell_check_languages;
+			current_langs += lang;
+			GearyApplication.instance.config.spell_check_languages = current_langs;
 		}
 		
-		string[] langs = {};
-		spell_check_languages.foreach ((l) => langs += l);		
-		s.spell_checking_languages = string.joinv(",", langs);
-		GearyApplication.instance.config.spell_check_languages = s.spell_checking_languages;
+		s.spell_checking_languages = string.joinv(",", 
+			GearyApplication.instance.config.spell_check_languages);
 	}
 
     private string[] get_user_preferred_languages() {

@@ -29,8 +29,6 @@ public class Configuration {
     
     public Settings gnome_interface;
     private Settings? indicator_datetime;
-
-    private string? _spell_check_languages = null;
     
     public int window_width {
         get { return settings.get_int(WINDOW_WIDTH_KEY); }
@@ -82,14 +80,9 @@ public class Configuration {
         get { return settings.get_boolean(SPELL_CHECK_KEY); }
     }
 
-    private weak string _get_spell_check_languages() {
-        _spell_check_languages = settings.get_string(SPELL_CHECK_LANGUAGES);
-        return _spell_check_languages;
-    }
-
-    public string spell_check_languages {
-        get { return _get_spell_check_languages(); }
-        set { settings.set_string(SPELL_CHECK_LANGUAGES, value); }
+    public string[] spell_check_languages {
+        owned get { return settings.get_strv(SPELL_CHECK_LANGUAGES); }
+        set { settings.set_strv(SPELL_CHECK_LANGUAGES, value); }
     }
 
     public bool play_sounds {
