@@ -37,9 +37,30 @@ public string[] get_available_dictionaries() {
 	return dictionaries; 
 }
 
+public string[] get_available_locales() {
+	string[] locales = {};
+	
+	try {		
+		string? output = null;
+		GLib.Subprocess p = new GLib.Subprocess.newv({ "locale", "-a" }, 
+			GLib.SubprocessFlags.STDOUT_PIPE);		
+		p.communicate_utf8(null, null, out output, null);
+		
+		foreach (string l in output.split("\n")) {
+			int dot = l.index_of_char('.');
+			locales += l.substring(0, dot);
+		}
+	} catch (GLib.Error e) {
+		return locales;
+	}
+	
+	return locales;
+}
+
 public string[] get_user_preferred_languages() {
 	string[] output = {};
-	foreach (unowned string lang in GLib.Intl.get_language_names()) {
+	unowned string[] language_names = GLib.Intl.get_language_names();
+	foreach (string lang in language_names) {
 		if (lang != "C")
 			output += lang;
 	}

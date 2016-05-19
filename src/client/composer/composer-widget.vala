@@ -2166,7 +2166,15 @@ public class ComposerWidget : Gtk.EventBox {
         Gtk.Menu language_submenu = new Gtk.Menu();
         language_chooser_item.set_submenu(language_submenu);
                
-        foreach (string lang in  International.get_available_dictionaries()) {
+        GLib.GenericSet<string> dicts = new GLib.GenericSet<string>(GLib.str_hash, GLib.str_equal);
+        foreach (string dict in International.get_available_dictionaries())
+			dicts.add(dict);
+        
+        foreach (string lang in  International.get_available_locales()) {
+			// Skip locales for which we do not have a dictionary installed. 
+			if (!dicts.contains(lang))
+				continue;
+				
 			string? lang_name = International.official_name_from_locale(lang);			
 			Gtk.CheckMenuItem lang_item = new Gtk.CheckMenuItem.with_label(
 				lang_name != null ? lang_name + " (" + lang + ")" : lang);
