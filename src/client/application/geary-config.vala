@@ -85,7 +85,6 @@ public class Configuration {
 			string[] langs = settings.get_strv(SPELL_CHECK_LANGUAGES);
 			if (langs.length == 0) {
 				langs = International.get_user_preferred_languages();
-				settings.set_strv(SPELL_CHECK_LANGUAGES, langs);
 			} 
 			return langs;
 		}
