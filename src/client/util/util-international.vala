@@ -47,8 +47,7 @@ public string[] get_available_locales() {
 		p.communicate_utf8(null, null, out output, null);
 		
 		foreach (string l in output.split("\n")) {
-			int dot = l.index_of_char('.');
-			locales += l.substring(0, dot);
+			locales += l;
 		}
 	} catch (GLib.Error e) {
 		return locales;
@@ -57,12 +56,34 @@ public string[] get_available_locales() {
 	return locales;
 }
 
+/* 
+ * Strip the information about the encoding from the locale. 
+ * 
+ * That is, en_US.UTF-8 is mapped to en_US, while en_GB remains
+ * unchanged. 
+ */
+public string strip_encoding(string locale) {
+	int dot = locale.index_of_char('.');
+	return locale.substring(0, dot);
+}
+
 public string[] get_user_preferred_languages() {
+	GLib.GenericSet<string> dicts = new GLib.GenericSet<string>(GLib.str_hash, GLib.str_equal);
+	foreach (string dict in get_available_dictionaries())
+		dicts.add(dict);
+		
+	GLib.GenericSet<string> locales = new GLib.GenericSet<string>(GLib.str_hash, GLib.str_equal);
+	foreach (string locale in get_available_locales())
+		locales.add(strip_encoding(locale));
+	
 	string[] output = {};
 	unowned string[] language_names = GLib.Intl.get_language_names();
 	foreach (string lang in language_names) {
-		if (lang != "C")
+		// Check if we have the associated locale and the dictionary installed before actually
+		//  considering this language. 
+		if (lang != "C" && dicts.contains(lang) && locales.contains(lang)) {
 			output += lang;
+		}
 	}
 	return output;
 }
@@ -97,13 +118,7 @@ public string? official_name_from_locale (string locale) {
 						
 						if (language_name != null) {
 							if (iso_639_1 != null) {
-								// Try to get a translation for the name, if available
-								string current_locale = GLib.Intl.setlocale(
-									GLib.LocaleCategory.MESSAGES, null);
-								GLib.Intl.setlocale(GLib.LocaleCategory.MESSAGES, iso_639_1);
-								official_names.insert(iso_639_1, 
-									GLib.dgettext("iso_639", language_name));
-								GLib.Intl.setlocale(GLib.LocaleCategory.MESSAGES, current_locale);
+								official_names.insert(iso_639_1, language_name);
 							}
 						}
 					}
@@ -118,7 +133,8 @@ public string? official_name_from_locale (string locale) {
 		pos = locale.index_of_char('_');
 	}
 	
-	return official_names.get(locale.substring(0, pos));
+	// Return a translated version of the language. 
+	return GLib.dgettext("iso_639", official_names.get(locale.substring(0, pos)));
 }
 
 }
