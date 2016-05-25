@@ -355,6 +355,7 @@ client/composer/contact-entry-completion.vala
 client/composer/contact-list-store.vala
 client/composer/email-entry.vala
 client/composer/scrollable-overlay.vala
+client/composer/spell-check-popover.vala
 client/composer/webview-edit-fixer.vala
 
 client/conversation-list/conversation-list-cell-renderer.vala

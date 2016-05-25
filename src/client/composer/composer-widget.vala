@@ -69,6 +69,7 @@ public class ComposerWidget : Gtk.EventBox {
     public const string ACTION_ADD_ATTACHMENT = "add attachment";
     public const string ACTION_ADD_ORIGINAL_ATTACHMENTS = "add original attachments";
     public const string ACTION_GEAR_MENU = "gear menu";
+    public const string ACTION_SELECT_DICTIONARY = "select dictionary";
     
     private const string DRAFT_SAVED_TEXT = _("Saved");
     private const string DRAFT_SAVING_TEXT = _("Saving");
@@ -251,7 +252,10 @@ public class ComposerWidget : Gtk.EventBox {
     private Gtk.MenuItem html_item2;
     private Gtk.MenuItem extended_item;
     
+    private ComposerToolbar composer_toolbar;
+    
     private Gtk.ActionGroup actions;
+    private SpellCheckPopover? spell_check_popover = null;
     private string? hover_url = null;
     private bool action_flag = false;
     private bool is_attachment_overlay_visible = false;
@@ -406,7 +410,7 @@ public class ComposerWidget : Gtk.EventBox {
             actions.get_action(ACTION_OUTDENT).icon_name = "format-indent-less-symbolic";
         }
         
-        ComposerToolbar composer_toolbar = new ComposerToolbar(actions, menu);
+        composer_toolbar = new ComposerToolbar(actions, menu);
         Gtk.Alignment toolbar_area = (Gtk.Alignment) builder.get_object("toolbar area");
         toolbar_area.add(composer_toolbar);
         bind_property("toolbar-text", composer_toolbar, "label-text", BindingFlags.SYNC_CREATE);
@@ -448,6 +452,7 @@ public class ComposerWidget : Gtk.EventBox {
         actions.get_action(ACTION_SEND).activate.connect(on_send);
         actions.get_action(ACTION_ADD_ATTACHMENT).activate.connect(on_add_attachment_button_clicked);
         actions.get_action(ACTION_ADD_ORIGINAL_ATTACHMENTS).activate.connect(on_pending_attachments_button_clicked);
+        actions.get_action(ACTION_SELECT_DICTIONARY).activate.connect(on_select_dictionary_clicked);
         
         ui = new Gtk.UIManager();
         ui.insert_action_group(actions, 0);
@@ -2216,6 +2221,17 @@ public class ComposerWidget : Gtk.EventBox {
 		
 		s.spell_checking_languages = string.joinv(",", 
 			GearyApplication.instance.config.spell_check_languages);
+	}
+	
+	private void on_select_dictionary_clicked() {
+		if (spell_check_popover == null) {
+			spell_check_popover = new SpellCheckPopover(composer_toolbar.select_dictionary_button);
+			spell_check_popover.selection_changed.connect((active_langs) => {
+				editor.settings.spell_checking_languages = string.joinv(",", active_langs);
+				GearyApplication.instance.config.spell_check_languages = active_langs;
+			});
+		}
+		spell_check_popover.toggle();
 	}
     
     private bool on_editor_key_press(Gdk.EventKey event) {
