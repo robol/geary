@@ -2165,34 +2165,6 @@ public class ComposerWidget : Gtk.EventBox {
         Gtk.MenuItem select_all_item = new Gtk.MenuItem.with_mnemonic(Stock.SELECT__ALL);
         select_all_item.activate.connect(on_select_all);
         context_menu.append(select_all_item);
-        
-        // Language chooser
-        Gtk.MenuItem language_chooser_item = new Gtk.MenuItem.with_mnemonic(_("Language"));
-        Gtk.Menu language_submenu = new Gtk.Menu();
-        language_chooser_item.set_submenu(language_submenu);
-               
-        GLib.GenericSet<string> dicts = new GLib.GenericSet<string>(GLib.str_hash, GLib.str_equal);
-        foreach (string dict in International.get_available_dictionaries())
-			dicts.add(dict);
-        
-        foreach (string lang in  International.get_available_locales()) {
-			// Skip locales for which we do not have a dictionary installed. The encoding of the 
-			// locale can be ignored for this, e.g., en_US.utf8 -> en_US. 
-			string short_lang = International.strip_encoding(lang);
-			
-			if (dicts.contains(short_lang)) {
-				string? lang_name = International.official_name_from_locale(lang);			
-				Gtk.CheckMenuItem lang_item = new Gtk.CheckMenuItem.with_label(
-					lang_name != null ? lang_name + " (" + short_lang + ")" : short_lang);
-				language_submenu.append(lang_item);			
-				lang_item.set_active(short_lang in GearyApplication.instance.config.spell_check_languages);
-				lang_item.toggled.connect (() => {
-					toggle_spell_checking_languages(short_lang);
-				});
-			}
-		}
-
-        context_menu.append(language_chooser_item);
 
         context_menu.show_all();
         
@@ -2200,28 +2172,6 @@ public class ComposerWidget : Gtk.EventBox {
         
         return false;
     }
-
-    private void toggle_spell_checking_languages(string lang) {
-		WebKit.WebSettings s = editor.settings;
-		
-		if (lang in GearyApplication.instance.config.spell_check_languages) {
-			string[] new_languages = {};
-			foreach (string l in GearyApplication.instance.config.spell_check_languages) {
-				if (l != lang) {
-					new_languages += l;
-				}
-			}
-			GearyApplication.instance.config.spell_check_languages = new_languages;
-		}
-		else {
-			string[] current_langs = GearyApplication.instance.config.spell_check_languages;
-			current_langs += lang;
-			GearyApplication.instance.config.spell_check_languages = current_langs;
-		}
-		
-		s.spell_checking_languages = string.joinv(",", 
-			GearyApplication.instance.config.spell_check_languages);
-	}
 	
 	private void on_select_dictionary_clicked() {
 		if (spell_check_popover == null) {
