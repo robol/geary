@@ -6,11 +6,13 @@
 
 extern const string LANGUAGE_SUPPORT_DIRECTORY;
 extern const string ISO_CODE_639_XML;
+extern const string ISO_CODE_3166_XML;
 public const string TRANSLATABLE = "translatable";
 
 namespace International {
 	
 private GLib.HashTable<string, string> official_names = null;
+private GLib.HashTable<string, string> official_countries = null;
 
 public const string SYSTEM_LOCALE = "";
 
@@ -91,6 +93,7 @@ public string[] get_user_preferred_languages() {
 public string? official_name_from_locale (string locale) {
 	if (official_names == null) {
 		official_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
+		official_countries = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
 			
 		unowned Xml.Doc doc = Xml.Parser.parse_file(ISO_CODE_639_XML);
 		if (doc == null) {
@@ -124,6 +127,39 @@ public string? official_name_from_locale (string locale) {
 				}
 			}
 		}
+		
+		doc = Xml.Parser.parse_file(ISO_CODE_3166_XML);
+		if (doc == null) {
+			return null;
+		}
+		else {
+			unowned Xml.Node root = doc.get_root_element();
+			for (unowned Xml.Node entry = root.children; entry != null; entry = entry.next) {
+				if (entry.type == Xml.ElementType.ELEMENT_NODE) {
+					string? iso_3166 = null;
+					string? country_name = null;
+					
+					for (unowned Xml.Attr a = entry.properties; a != null; a = a.next) {				
+						switch (a.name) {
+							case "alpha_2_code":
+								iso_3166 = a.children->content;
+								break;
+							case "name":
+								country_name = a.children->content;
+								break;
+							default:
+								break;
+						}
+						
+						if (country_name != null) {
+							if (iso_3166 != null) {
+								official_countries.insert(iso_3166, country_name);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	// Look for the name of language matching only the part before the _
@@ -133,7 +169,13 @@ public string? official_name_from_locale (string locale) {
 	}
 	
 	// Return a translated version of the language. 
-	return GLib.dgettext("iso_639", official_names.get(locale.substring(0, pos)));
+	string language_name = GLib.dgettext("iso_639", official_names.get(locale.substring(0, pos)));
+	string country_name  = GLib.dgettext("iso_3166", official_countries.get(locale.substring(pos+1)));
+	
+	if (country_name != null)
+		language_name = language_name + " (" + country_name + ")";
+		
+	return language_name;
 }
 
 }
