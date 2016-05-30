@@ -11,8 +11,8 @@ public const string TRANSLATABLE = "translatable";
 
 namespace International {
 	
-private GLib.HashTable<string, string> official_names = null;
-private GLib.HashTable<string, string> official_countries = null;
+private GLib.HashTable<string, string> language_names = null;
+private GLib.HashTable<string, string> country_names = null;
 
 public const string SYSTEM_LOCALE = "";
 
@@ -90,10 +90,9 @@ public string[] get_user_preferred_languages() {
 	return output;
 }
 
-public string? official_name_from_locale (string locale) {
-	if (official_names == null) {
-		official_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
-		official_countries = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
+public string? language_name_from_locale (string locale) {
+	if (language_names == null) {
+		language_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
 			
 		unowned Xml.Doc doc = Xml.Parser.parse_file(ISO_CODE_639_XML);
 		if (doc == null) {
@@ -120,15 +119,33 @@ public string? official_name_from_locale (string locale) {
 						
 						if (language_name != null) {
 							if (iso_639_1 != null) {
-								official_names.insert(iso_639_1, language_name);
+								language_names.insert(iso_639_1, language_name);
 							}
 						}
 					}
 				}
 			}
 		}
+	}
+	
+	// Look for the name of language matching only the part before the _
+	int pos = -1;
+	if ("_" in locale) {
+		pos = locale.index_of_char('_');
+	}
+	
+	// Return a translated version of the language. 
+	string language_name = GLib.dgettext("iso_639", language_names.get(locale.substring(0, pos)));
 		
-		doc = Xml.Parser.parse_file(ISO_CODE_3166_XML);
+	return language_name;
+}
+
+public string? country_name_from_locale(string locale) {
+	if (country_names == null) {
+		country_names = new HashTable<string, string>(GLib.str_hash, GLib.str_equal);	
+				
+		unowned Xml.Doc doc = Xml.Parser.parse_file(ISO_CODE_3166_XML);
+		
 		if (doc == null) {
 			return null;
 		}
@@ -153,13 +170,13 @@ public string? official_name_from_locale (string locale) {
 						
 						if (country_name != null) {
 							if (iso_3166 != null) {
-								official_countries.insert(iso_3166, country_name);
+								country_names.insert(iso_3166, country_name);
 							}
 						}
 					}
 				}
 			}
-		}
+		}		
 	}
 	
 	// Look for the name of language matching only the part before the _
@@ -167,15 +184,10 @@ public string? official_name_from_locale (string locale) {
 	if ("_" in locale) {
 		pos = locale.index_of_char('_');
 	}
-	
-	// Return a translated version of the language. 
-	string language_name = GLib.dgettext("iso_639", official_names.get(locale.substring(0, pos)));
-	string country_name  = GLib.dgettext("iso_3166", official_countries.get(locale.substring(pos+1)));
-	
-	if (country_name != null)
-		language_name = language_name + " (" + country_name + ")";
 		
-	return language_name;
+	string country_name  = GLib.dgettext("iso_3166", country_names.get(locale.substring(pos+1)));
+	
+	return country_name;
 }
 
 }
