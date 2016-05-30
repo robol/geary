@@ -31,26 +31,9 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 	 
 	 private bool is_expanded = false;
 	 
-	 private Gtk.ListBox langs_list;	
+	 private Gtk.ListBox langs_list;
 	 
-	 private class SpellCheckMoreRow : Gtk.ListBoxRow, SpellCheckRow {
-		 public SpellCheckMoreRow() {
-			 add(new Gtk.Label(_("Show more languages")));
-		 }
-		 
-		 public bool is_row_visible(bool is_expanded) {
-			 return !is_expanded;
-		 }
-		 
-		 public void handle_activation(SpellCheckPopover spell_check_popover) {
-			 if (spell_check_popover.is_expanded)
-				spell_check_popover.is_expanded = false;
-			 else
-				spell_check_popover.is_expanded = true;
-				
-			 spell_check_popover.langs_list.invalidate_filter();
-		 }
-	 }
+	 private Gtk.Entry search_box;
 	 
 	 private class SpellCheckLangRow : Gtk.ListBoxRow, SpellCheckRow {
 		 
@@ -118,8 +101,9 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 	 }
 	 
 	 private bool filter_function (Gtk.ListBoxRow row) {
-		 SpellCheckRow r = row as SpellCheckRow;
-		 return r.is_row_visible(is_expanded);
+		 string text = search_box.get_text();		 
+		 SpellCheckLangRow r = row as SpellCheckLangRow;
+		 return (r.is_row_visible(is_expanded) && text.down() in r.lang_name.down());
 	 }
 	 
 	 private void setup_popover() {
@@ -128,7 +112,15 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 		 string[] languages = International.get_available_dictionaries();
 		 
 		 Gtk.Box content = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
-		 content.pack_start(new Gtk.Label(_("Select the active spell checker dictionaries")), false, true, 6);
+		 
+		 // Setup a search box so that the user can lookup more languages, 		 // if needed. 
+		 search_box = new Gtk.Entry();		 
+		 // FIXME: We should not set the icon if the current theme does not support it. 
+		 search_box.set_icon_from_icon_name(Gtk.EntryIconPosition.PRIMARY, "edit-find-symbolic");
+		 search_box.set_placeholder_text(_("Search for more languages"));
+		 search_box.changed.connect(on_search_box_changed);
+		 search_box.grab_focus.connect(on_search_box_grab_focus);
+		 content.pack_start(search_box, false, true, 6);
 		 
 		 Gtk.ScrolledWindow view = new Gtk.ScrolledWindow(null, null);
 		 view.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
@@ -143,30 +135,42 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 				selected_rows.add(lang);
 				
 			row.toggled.connect(this.on_row_toggled);
-		 }		 
-		 
-		 SpellCheckMoreRow row = new SpellCheckMoreRow();
-		 langs_list.add(row);
-		 
+		 }
 		 langs_list.row_activated.connect(on_row_activated);
+		 view.add(langs_list);
 		 
-		 content.pack_start(langs_list, false, true, 6);
-		 view.add(content);
+		 content.pack_start(view, true, true, 6);		 
 		 
-		 langs_list.set_filter_func(this.filter_function);
+		 langs_list.set_filter_func(this.filter_function);		
 		 
 		 // We need to handle a sensible size request, otherwise nothing will be 
 		 // visible. We make it 2/3 of the window height. 
 		 view.set_size_request(-1, GearyApplication.instance.config.window_height * 2 / 3);
 		 // view.set_min_content_height(300);
 		 // view.set_size_request(-1, 300);
+		 popover.add(content);
 		 
-		 popover.add(view);
+		 // Make sure that the search box does not get the focus first. We want it to have it only 
+		 // if the user wants to perform an extended search. 
+		 content.set_focus_child(view);
 	 }
 	 
 	 private void on_row_activated(Gtk.ListBoxRow row) {
 		 SpellCheckRow r = row as SpellCheckRow;
 		 r.handle_activation(this);
+	 }
+	 
+	 private void on_search_box_changed() {
+		 langs_list.invalidate_filter();
+	 }
+	 
+	 private void on_search_box_grab_focus() {
+		 set_expanded(true);
+	 }
+	 
+	 private void set_expanded(bool expanded) {
+		 is_expanded = expanded;
+		 langs_list.invalidate_filter();
 	 }
 	 
 	 /*
@@ -177,6 +181,10 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 	 public bool toggle() {
 		 if (popover.get_visible()) {
 			 popover.hide();
+			 
+			 // Make sure that when the box is shown the list is not expanded anymore. 
+			 is_expanded = false;
+			 langs_list.invalidate_filter();
 		 }
 		 else {
 			 popover.show_all();
@@ -190,10 +198,6 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 			selected_rows.add(lang_code);
 		 else
 			selected_rows.remove(lang_code);
-			
-		// In any case, restrict the list
-		is_expanded = false;
-		langs_list.invalidate_filter();
 			
 		// Signal that the selection has changed
 		string[] active_langs = {};
