@@ -39,6 +39,12 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 	 
 	 private Gtk.Box content;
 	 
+	 private enum SpellCheckStatus {
+		 INACTIVE, 
+		 DEACTIVATING,
+		 ACTIVE
+	 }
+	 
 	 private class SpellCheckLangRow : Gtk.ListBoxRow, SpellCheckRow {
 		 
 		 public string lang_code;
@@ -48,7 +54,10 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 		 public signal void toggled (string lang_code, bool status);
 		 
 		 private Gtk.Label label;
-		 private bool lang_active = false;
+		 
+		 private SpellCheckStatus lang_active = SpellCheckStatus.INACTIVE;
+		 
+		 private uint timer_id = 0;
 		 
 		 public SpellCheckLangRow (string lang_code) {
 			 this.lang_code = lang_code;			 
@@ -71,7 +80,7 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 			 
 			 foreach (string active_lang in GearyApplication.instance.config.spell_check_languages) {
 				 if (active_lang == lang_code)
-					lang_active = true;
+					lang_active = SpellCheckStatus.ACTIVE;
 			 }
 			 			 
 			 update_label();			 
@@ -79,7 +88,7 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 		 }
 		 
 		 public bool is_lang_active() {
-			 return lang_active;
+			 return lang_active == SpellCheckStatus.ACTIVE;
 		 }
 		 
 		 private void update_label() {
@@ -88,8 +97,15 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 				 text += " (<i>" + country_name + "</i>)";
 			 }
 			 
-			 if (is_lang_active()) {
-				 text += " \t \t <b>✓</b> ";
+			 switch (lang_active) {
+				 case SpellCheckStatus.ACTIVE:
+					text += " \t \t <b>✓</b> ";
+					break;
+				case SpellCheckStatus.DEACTIVATING:
+					text += " \t<i><small>" + 
+						_("click again to remove from the quicklist") + 
+						"</small></i>";
+					break;
 			 }
 			 
 			 label.set_markup(text);
@@ -100,24 +116,64 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 			 return (filter_down in lang_name.down() || filter_down in country_name.down());
 		 }
 		 
-		 private void set_lang_active(bool active) {			
+		 private void set_lang_active(SpellCheckStatus active) {			
 			 lang_active = active;			 
-			 if (active) {
-				 // If the lang is not visible make it visible now
-				 if (!is_lang_visible) {
-					 string[] visible_langs = GearyApplication.instance.config.spell_check_visible_languages;
-					 visible_langs += lang_code;
-					 GearyApplication.instance.config.spell_check_visible_languages = visible_langs;
-					 is_lang_visible = true;
-				 }
+			 
+			 switch (active) {
+				 case SpellCheckStatus.ACTIVE:
+					 // If the lang is not visible make it visible now
+					 if (!is_lang_visible) {
+						 string[] visible_langs = GearyApplication.instance.config.spell_check_visible_languages;
+						 visible_langs += lang_code;
+						 GearyApplication.instance.config.spell_check_visible_languages = visible_langs;
+						 is_lang_visible = true;
+					 }
+					 break;
+				 case SpellCheckStatus.DEACTIVATING:
+					// Make it switch automatically to INACTIVE in 5 seconds
+					timer_id = GLib.Timeout.add(5000, this.on_automatic_deactivation, 0);
+					break;
+				 case SpellCheckStatus.INACTIVE:
+					// Reset the timer counter, this has either been disabled or has expired. 
+					if (timer_id > 0) {
+						timer_id = 0;
+					}
+					break;
 			 }
 			 
 			 update_label();
-			 this.toggled(lang_code, active);
+			 this.toggled(lang_code, active == SpellCheckStatus.ACTIVE);
+		 }
+		 
+		 private bool on_automatic_deactivation() {			 
+			 set_lang_active(SpellCheckStatus.INACTIVE);
+			 return false;
 		 }
 		 
 		 public void handle_activation(SpellCheckPopover spell_check_popover) {
-			 set_lang_active(! is_lang_active());
+			 switch (lang_active) {
+				 case SpellCheckStatus.ACTIVE:
+					set_lang_active(SpellCheckStatus.DEACTIVATING);
+					break;
+				case SpellCheckStatus.DEACTIVATING:
+					GLib.Source.remove(timer_id);
+												
+					// Since the user has selected the button before the automatic timeout, 
+					// we shall remove it from the quicklist. 
+					is_lang_visible = false;
+					string[] visible_langs = {};
+					foreach (string visible_lang in GearyApplication.instance.config.spell_check_visible_languages) {
+						if (visible_lang != lang_code)
+							visible_langs += visible_lang;
+					}
+					GearyApplication.instance.config.spell_check_visible_languages = visible_langs;
+					
+					set_lang_active(SpellCheckStatus.INACTIVE);
+					break;
+				case SpellCheckStatus.INACTIVE:
+					set_lang_active(SpellCheckStatus.ACTIVE);
+					break;
+			 }
 		 }
 		 
 		 public bool is_row_visible(bool is_expanded) {
@@ -174,7 +230,7 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 		 
 		 langs_list.set_filter_func(this.filter_function);		
 		 
-		 view.set_size_request(-1, 300);
+		 view.set_size_request(350, 300);
 		 popover.add(content);
 		 
 		 // Make sure that the search box does not get the focus first. We want it to have it only 
@@ -190,6 +246,10 @@ interface SpellCheckRow : Gtk.ListBoxRow {
 	 private void on_row_activated(Gtk.ListBoxRow row) {
 		 SpellCheckRow r = row as SpellCheckRow;
 		 r.handle_activation(this);
+		 
+		 // Make sure that we update the visible languages based on the
+		 // possibly updated is_lang_visible_properties. 
+		 langs_list.invalidate_filter();
 	 }
 	 
 	 private void on_search_box_changed() {
